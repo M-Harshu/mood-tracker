@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daily Mood Tracker</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #f5f0eb 0%, #e8e4df 100%);
+      min-height: 100vh;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      color: #3d3a36;
+    }
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 600;
+      color: #4a4540;
+      margin-bottom: 0.5rem;
+    }
+    .subtitle {
+      font-size: 0.9rem;
+      color: #6b6560;
+      margin-bottom: 2rem;
+    }
+    /* Mood buttons in a row, large and easy to click */
+    .moods {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      justify-content: center;
+      margin-bottom: 2rem;
+    }
+    .mood-btn {
+      width: 5rem;
+      height: 5rem;
+      border: 2px solid #d4cfc9;
+      border-radius: 12px;
+      background: #fff;
+      font-size: 2.5rem;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+    }
+    .mood-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    .mood-btn.selected {
+      border-color: #7a9b76;
+      background: #e8f0e6;
+      box-shadow: 0 4px 12px rgba(122,155,118,0.25);
+    }
+    .mood-label {
+      display: block;
+      font-size: 0.7rem;
+      color: #6b6560;
+      margin-top: 0.25rem;
+      text-align: center;
+    }
+    .mood-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    /* Message shown after selecting a mood */
+    .message {
+      min-height: 2.5rem;
+      font-size: 1rem;
+      color: #5a554f;
+      margin-bottom: 2rem;
+      text-align: center;
+    }
+    /* Summary of click counts */
+    .summary {
+      background: #fff;
+      border: 1px solid #e0dbd5;
+      border-radius: 10px;
+      padding: 1rem 1.5rem;
+      max-width: 320px;
+    }
+    .summary h2 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #4a4540;
+      margin: 0 0 0.75rem 0;
+    }
+    .summary ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      font-size: 0.9rem;
+      color: #5a554f;
+    }
+    .summary li {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.25rem 0;
+      border-bottom: 1px solid #f0ebe5;
+    }
+    .summary li:last-child {
+      border-bottom: none;
+    }
+    .count {
+      font-weight: 600;
+      color: #7a9b76;
+    }
+  </style>
+</head>
+<body>
+  <h1>Daily Mood Tracker</h1>
+  <p class="subtitle">How are you feeling? Click a mood below.</p>
+
+  <div class="moods">
+    <!-- Each mood is a button with emoji + label -->
+    <div class="mood-item">
+      <button class="mood-btn" data-mood="very-happy" aria-label="Very Happy">😄</button>
+      <span class="mood-label">Very Happy</span>
+    </div>
+    <div class="mood-item">
+      <button class="mood-btn" data-mood="happy" aria-label="Happy">😊</button>
+      <span class="mood-label">Happy</span>
+    </div>
+    <div class="mood-item">
+      <button class="mood-btn" data-mood="neutral" aria-label="Neutral">😐</button>
+      <span class="mood-label">Neutral</span>
+    </div>
+    <div class="mood-item">
+      <button class="mood-btn" data-mood="sad" aria-label="Sad">😢</button>
+      <span class="mood-label">Sad</span>
+    </div>
+    <div class="mood-item">
+      <button class="mood-btn" data-mood="very-sad" aria-label="Very Sad">😞</button>
+      <span class="mood-label">Very Sad</span>
+    </div>
+  </div>
+
+  <p class="message" id="message" role="status"></p>
+
+  <section class="summary" aria-label="Session counts">
+    <h2>This session</h2>
+    <ul id="counts">
+      <li><span>Very Happy</span> <span class="count" id="count-very-happy">0</span></li>
+      <li><span>Happy</span> <span class="count" id="count-happy">0</span></li>
+      <li><span>Neutral</span> <span class="count" id="count-neutral">0</span></li>
+      <li><span>Sad</span> <span class="count" id="count-sad">0</span></li>
+      <li><span>Very Sad</span> <span class="count" id="count-very-sad">0</span></li>
+    </ul>
+  </section>
+
+  <script>
+    // Object that stores how many times each mood was clicked this session
+    const moodCounts = {
+      'very-happy': 0,
+      'happy': 0,
+      'neutral': 0,
+      'sad': 0,
+      'very-sad': 0
+    };
+
+    // Friendly messages shown when user selects each mood
+    const moodMessages = {
+      'very-happy': "You're feeling very happy today!",
+      'happy': "You're feeling happy today!",
+      'neutral': "You're feeling neutral today.",
+      'sad': "You're feeling sad today.",
+      'very-sad': "You're feeling very sad today."
+    };
+
+    const messageEl = document.getElementById('message');
+    const buttons = document.querySelectorAll('.mood-btn');
+
+    // Remove highlight from all buttons, then highlight the clicked one
+    function setSelected(selectedBtn) {
+      buttons.forEach(btn => btn.classList.remove('selected'));
+      if (selectedBtn) selectedBtn.classList.add('selected');
+    }
+
+    // Update the summary numbers on the page
+    function updateCounts() {
+      Object.keys(moodCounts).forEach(key => {
+        document.getElementById('count-' + key).textContent = moodCounts[key];
+      });
+    }
+
+    // Handle a mood button click
+    buttons.forEach(btn => {
+      btn.addEventListener('click', function () {
+        const mood = this.getAttribute('data-mood');
+        moodCounts[mood] += 1;
+        setSelected(this);
+        messageEl.textContent = moodMessages[mood];
+        updateCounts();
+      });
+    });
+  </script>
+</body>
+</html>
